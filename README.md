@@ -28,6 +28,8 @@ These are whole-transaction compute units in LiteSVM, averaged over 64 wallets. 
 
 **The comparison is fair.** The Anchor program logs on every instruction and this one logs nothing. So the middle column is the same Anchor commit with every `msg!` removed, built with `--features no-log-ix-name`. Both `.so` files are in [`bench/`](bench).
 
+**Regressions are caught in CI.** [`tests/cu_report.rs`](tests/cu_report.rs) runs every instruction from a fixed wallet, so its numbers are the same on every run. On each pull request, [solana-cu-guard](https://github.com/malharc373/solana-cu-guard) builds that report from both the PR and its base commit and fails the PR if any instruction costs more.
+
 ### Where the savings come from
 - **The PDA check.** Anchor's `seeds = [...], bump = counter.bump` calls `create_program_address`, which costs 1,500 CU. Pinocchio's `Address::derive_address` does a single `sha256` with the stored bump, which is safe because that bump came from `find_program_address` when the account was created.
 - **No deserialization.** Anchor copies the account into a struct and writes it back with Borsh. Here the 42 bytes are read and written in place.

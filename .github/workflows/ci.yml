@@ -46,6 +46,58 @@ jobs:
       - name: Anchor vs Pinocchio benchmark
         run: cargo test --test bench -- --nocapture
 
+  # Builds a deterministic CU report from the PR and from its base commit, then
+  # fails the PR if any instruction got more expensive.
+  compute-units:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Cache cargo and Solana tools
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cache/solana
+            ~/.local/share/solana
+          key: ${{ runner.os }}-cu-${{ env.SOLANA_VERSION }}-${{ hashFiles('Cargo.lock') }}
+
+      - name: Install Solana CLI
+        run: |
+          [ -x "$HOME/.local/share/solana/install/active_release/bin/solana" ] || \
+            sh -c "$(curl -sSfL https://release.anza.xyz/${SOLANA_VERSION}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+
+      - name: Report from the pull request
+        run: |
+          cargo build-sbf
+          cargo test --test cu_report
+          cp target/cu-report.json "$RUNNER_TEMP/head.json"
+
+      - name: Report from the base branch
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git worktree add "$RUNNER_TEMP/base" "$BASE_SHA"
+          cd "$RUNNER_TEMP/base"
+          if [ -f tests/cu_report.rs ]; then
+            cargo build-sbf
+            cargo test --test cu_report
+            cp target/cu-report.json "$RUNNER_TEMP/base.json"
+          fi
+
+      - uses: malharc373/solana-cu-guard@v1
+        with:
+          base: ${{ runner.temp }}/base.json
+          head: ${{ runner.temp }}/head.json
+
   client:
     runs-on: ubuntu-latest
     defaults:
