@@ -24,7 +24,7 @@ cargo build-sbf && cargo test --test bench -- --nocapture
 | `close` | 3,681 | 3,471 | 345 | 90% fewer |
 | Binary size | 165,064 B | 156,152 B | 10,520 B | 15× smaller |
 
-These are whole-transaction compute units in LiteSVM, averaged over 64 wallets. Devnet gives the same figures for `increment`, `decrement` and `close`. The cost of `initialize` depends on the wallet, because `find_program_address` pays about 1,500 CU for each bump it rejects.
+These are whole-transaction compute units in LiteSVM, averaged over 64 wallets. Devnet gives the same figures for `increment`, `decrement` and `close`. The cost of `initialize` depends on the wallet, because `find_program_address` pays about 1,500 CU for each bump it rejects. For example, my devnet wallet's counter PDA has bump 249: six bumps are rejected first, so its `initialize` cost **12,004 CU** on devnet. The same wallet's Anchor PDA has bump 253, so on any single wallet either program can look cheaper for `initialize`. The table shows the 64-wallet average, and the per-instruction savings on `increment`, `decrement` and `close` don't depend on the bump.
 
 **The comparison is fair.** The Anchor program logs on every instruction and this one logs nothing. So the middle column is the same Anchor commit with every `msg!` removed, built with `--features no-log-ix-name`. Both `.so` files are in [`bench/`](bench).
 
