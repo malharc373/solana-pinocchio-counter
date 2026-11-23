@@ -126,13 +126,8 @@ fn load_checked<'a>(
     if &state.authority != authority.address() {
         return Err(CounterError::Unauthorized.into());
     }
-    // Re-derive the PDA from the stored bump: one sha256, no curve check needed
-    // because the bump came from `find_program_address` at creation.
-    let expected = Address::derive_address(
-        &[COUNTER_SEED, authority.address().as_ref()],
-        Some(state.bump),
-        program_id,
-    );
+    // Re-derive the PDA by searching for the bump instead of using the stored one.
+    let (expected, _) = find_pda(authority.address(), program_id)?;
     if counter_address != &expected {
         return Err(ProgramError::InvalidSeeds);
     }
