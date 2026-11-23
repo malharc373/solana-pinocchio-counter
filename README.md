@@ -1,5 +1,7 @@
 # 03-pinocchio-counter
 
+[![CI](https://github.com/malharc373/solana-pinocchio-counter/actions/workflows/ci.yml/badge.svg)](https://github.com/malharc373/solana-pinocchio-counter/actions/workflows/ci.yml)
+
 My [Anchor counter](https://github.com/malharc373/solana-counter) rewritten in **[Pinocchio](https://github.com/anza-xyz/pinocchio) 0.12**: same behaviour, same PDA scheme, every check Anchor did now written by hand. The benchmark runs both builds through the same flow.
 
 | | |

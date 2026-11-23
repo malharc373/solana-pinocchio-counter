@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  SOLANA_VERSION: v3.1.10
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache cargo and Solana tools
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cache/solana
+            ~/.local/share/solana
+            target
+          key: ${{ runner.os }}-${{ env.SOLANA_VERSION }}-${{ hashFiles('Cargo.lock') }}
+
+      - name: Install Solana CLI
+        run: |
+          [ -x "$HOME/.local/share/solana/install/active_release/bin/solana" ] || \
+            sh -c "$(curl -sSfL https://release.anza.xyz/${SOLANA_VERSION}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+
+      - name: Format
+        run: cargo fmt --check
+
+      - name: Build program
+        run: cargo build-sbf
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Tests
+        run: cargo test --test test_counter
+
+      - name: Anchor vs Pinocchio benchmark
+        run: cargo test --test bench -- --nocapture
+
+  client:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run typecheck
