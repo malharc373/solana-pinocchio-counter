@@ -17,6 +17,7 @@ pinocchio = { version = "0.12", features = ["cpi"] }
 solana-address = { version = "2", features = ["decode"] }
 
 [dev-dependencies]
+cu-report = { git = "https://github.com/malharc373/solana-cu-guard", tag = "v1.2.0" }
 litesvm = "0.10.0"
 solana-rent = "3"
 solana-account = "3"

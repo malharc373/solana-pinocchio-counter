@@ -2,8 +2,9 @@
 //!
 //!   cargo build-sbf && cargo test --test cu_report
 //!
-//! Writes `target/cu-report.json` ({"instruction": compute units}), which the
-//! cu-guard action compares against the same report built from the base branch.
+//! Writes `target/cu-report.json` ({"instruction": compute units}) with the
+//! `cu-report` crate. The cu-guard action compares it against the same report
+//! built from the base branch.
 //! The wallet comes from a fixed secret key, so the counter PDA and its bump are
 //! the same on every run and so are the compute units. (`tests/bench.rs` uses
 //! random wallets and averages; that suits a comparison, not a regression gate.)
@@ -16,7 +17,6 @@ use {
     solana_pubkey::Pubkey,
     solana_signer::Signer,
     solana_transaction::versioned::VersionedTransaction,
-    std::fmt::Write,
 };
 
 const SYSTEM: Pubkey = Pubkey::new_from_array([0; 32]);
@@ -72,8 +72,8 @@ fn write_cu_report() {
         ),
     ];
 
-    let mut json = String::from("{");
-    for (i, (name, tag, metas)) in steps.into_iter().enumerate() {
+    let mut report = cu_report::Report::new();
+    for (name, tag, metas) in steps {
         let ix = Instruction::new_with_bytes(id, &[tag], metas);
         let msg = Message::new_with_blockhash(&[ix], Some(&u), &svm.latest_blockhash());
         let tx = VersionedTransaction::try_new(VersionedMessage::Legacy(msg), &[&user]).unwrap();
@@ -81,12 +81,8 @@ fn write_cu_report() {
             .send_transaction(tx)
             .unwrap_or_else(|e| panic!("{name}: {:?}\n{}", e.err, e.meta.logs.join("\n")));
         svm.expire_blockhash();
-        let sep = if i == 0 { "" } else { ", " };
-        write!(json, "{sep}\"{name}\": {}", meta.compute_units_consumed).unwrap();
+        report.record(name, meta.compute_units_consumed);
     }
-    json.push_str("}\n");
-
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/target/cu-report.json");
-    std::fs::write(path, &json).unwrap();
-    println!("{path}: {json}");
+    let path = report.write(cu_report::default_path!()).unwrap();
+    println!("{}:\n{}", path.display(), report.to_json());
 }
